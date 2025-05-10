@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Picker, ScrollView } from 'react-native';
+import NavBar from '../components/NavBar';
 
 const activityLevels = [
   { label: 'Sedentary (little/no exercise)', value: 1.2 },
@@ -73,107 +74,112 @@ export default function NutrientScreen() {
     });
   };
 
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Nutrient Calculation</Text>
+    return (
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+        <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>Nutrient Calculation</Text>
 
-      <Text style={styles.label}>Gender</Text>
-      <View style={styles.row}>
-        <TouchableOpacity
-          style={[styles.genderButton, gender === 'male' && styles.genderButtonSelected]}
-          onPress={() => setGender('male')}
-        >
-          <Text style={[styles.genderText, gender === 'male' && styles.genderTextSelected]}>Male</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.genderButton, gender === 'female' && styles.genderButtonSelected]}
-          onPress={() => setGender('female')}
-        >
-          <Text style={[styles.genderText, gender === 'female' && styles.genderTextSelected]}>Female</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.label}>Age</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter age"
-        value={age}
-        onChangeText={setAge}
-        keyboardType="numeric"
-      />
-
-      <Text style={styles.label}>Height (cm.)</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter height"
-        value={height}
-        onChangeText={setHeight}
-        keyboardType="numeric"
-      />
-
-      <Text style={styles.label}>Weight (kg.)</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter weight"
-        value={weight}
-        onChangeText={setWeight}
-        keyboardType="numeric"
-      />
-
-      <Text style={styles.label}>Exercise Level</Text>
-      <View style={styles.pickerContainer}>
-        <Picker
-          selectedValue={activity}
-          onValueChange={setActivity}
-          style={styles.picker}
-        >
-          {activityLevels.map((item, idx) => (
-            <Picker.Item key={idx} label={item.label} value={item.value} />
-          ))}
-        </Picker>
-      </View>
-
-      <Text style={styles.label}>Goal</Text>
-      <View style={styles.pickerContainer}>
-        <Picker
-          selectedValue={goal}
-          onValueChange={setGoal}
-          style={styles.picker}
-        >
-          {goals.map((item, idx) => (
-            <Picker.Item key={idx} label={item.label} value={item.value} />
-          ))}
-        </Picker>
-      </View>
-
-      {errorMsg ? <Text style={styles.errorMsg}>{errorMsg}</Text> : null}
-
-      <TouchableOpacity style={styles.submitButton} onPress={handleCalculate}>
-        <Text style={styles.submitButtonText}>Calculate</Text>
-      </TouchableOpacity>
-
-      {result && (
-        <View style={styles.resultContainer}>
-          <Text style={styles.resultTitle}>Result</Text>
-          <Text style={styles.resultText}>BMR: {result.bmr} kcal</Text>
-          <Text style={styles.resultText}>TDEE: {result.tdee} kcal</Text>
-          <Text style={styles.resultText}>Total Calories: {result.totalCalories} kcal</Text>
-          <View style={styles.macroRow}>
-            <Text style={styles.macroLabel}>Protein</Text>
-            <Text style={styles.macroValue}>{result.protein.gram}g / {result.protein.cal} kcal / {result.protein.percent}%</Text>
-          </View>
-          <View style={styles.macroRow}>
-            <Text style={styles.macroLabel}>Carb</Text>
-            <Text style={styles.macroValue}>{result.carb.gram}g / {result.carb.cal} kcal / {result.carb.percent}%</Text>
-          </View>
-          <View style={styles.macroRow}>
-            <Text style={styles.macroLabel}>Fat</Text>
-            <Text style={styles.macroValue}>{result.fat.gram}g / {result.fat.cal} kcal / {result.fat.percent}%</Text>
-          </View>
+        <Text style={styles.label}>Gender</Text>
+        <View style={styles.row}>
+            <TouchableOpacity
+            style={[styles.genderButton, gender === 'male' && styles.genderButtonSelected]}
+            onPress={() => setGender('male')}
+            >
+            <Text style={[styles.genderText, gender === 'male' && styles.genderTextSelected]}>Male</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+            style={[styles.genderButton, gender === 'female' && styles.genderButtonSelected]}
+            onPress={() => setGender('female')}
+            >
+            <Text style={[styles.genderText, gender === 'female' && styles.genderTextSelected]}>Female</Text>
+            </TouchableOpacity>
         </View>
-      )}
-    </ScrollView>
-  );
+
+        <Text style={styles.label}>Age</Text>
+        <TextInput
+            style={styles.input}
+            placeholder="Enter age"
+            value={age}
+            onChangeText={setAge}
+            keyboardType="numeric"
+        />
+
+        <Text style={styles.label}>Height (cm.)</Text>
+        <TextInput
+            style={styles.input}
+            placeholder="Enter height"
+            value={height}
+            onChangeText={setHeight}
+            keyboardType="numeric"
+        />
+
+        <Text style={styles.label}>Weight (kg.)</Text>
+        <TextInput
+            style={styles.input}
+            placeholder="Enter weight"
+            value={weight}
+            onChangeText={setWeight}
+            keyboardType="numeric"
+        />
+
+        <Text style={styles.label}>Exercise Level</Text>
+        <View style={styles.pickerContainer}>
+            <Picker
+            selectedValue={activity}
+            onValueChange={setActivity}
+            style={styles.picker}
+            >
+            {activityLevels.map((item, idx) => (
+                <Picker.Item key={idx} label={item.label} value={item.value} />
+            ))}
+            </Picker>
+        </View>
+
+        <Text style={styles.label}>Goal</Text>
+        <View style={styles.pickerContainer}>
+            <Picker
+            selectedValue={goal}
+            onValueChange={setGoal}
+            style={styles.picker}
+            >
+            {goals.map((item, idx) => (
+                <Picker.Item key={idx} label={item.label} value={item.value} />
+            ))}
+            </Picker>
+        </View>
+
+        {errorMsg ? <Text style={styles.errorMsg}>{errorMsg}</Text> : null}
+
+        <TouchableOpacity style={styles.submitButton} onPress={handleCalculate}>
+            <Text style={styles.submitButtonText}>Calculate</Text>
+        </TouchableOpacity>
+
+        {result && (
+            <View style={styles.resultContainer}>
+            <Text style={styles.resultTitle}>Result</Text>
+            <Text style={styles.resultText}>BMR: {result.bmr} kcal</Text>
+            <Text style={styles.resultText}>TDEE: {result.tdee} kcal</Text>
+            <Text style={styles.resultText}>Total Calories: {result.totalCalories} kcal</Text>
+            <View style={styles.macroRow}>
+                <Text style={styles.macroLabel}>Protein</Text>
+                <Text style={styles.macroValue}>{result.protein.gram}g / {result.protein.cal} kcal / {result.protein.percent}%</Text>
+            </View>
+            <View style={styles.macroRow}>
+                <Text style={styles.macroLabel}>Carb</Text>
+                <Text style={styles.macroValue}>{result.carb.gram}g / {result.carb.cal} kcal / {result.carb.percent}%</Text>
+            </View>
+            <View style={styles.macroRow}>
+                <Text style={styles.macroLabel}>Fat</Text>
+                <Text style={styles.macroValue}>{result.fat.gram}g / {result.fat.cal} kcal / {result.fat.percent}%</Text>
+            </View>
+            </View>
+        )}
+        {/* Add padding at the bottom so content doesn't hide behind NavBar */}
+        <View style={{ height: 80 }} />
+        </ScrollView>
+        <NavBar />
+    </View>
+    );
 }
 
 const styles = StyleSheet.create({

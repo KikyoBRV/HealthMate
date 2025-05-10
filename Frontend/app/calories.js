@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import NavBar from '../components/NavBar';
 
 const HEART_RATE_ZONES = [
   { label: 'Zone 1 (Very Light)\n50–60% of max HR (~95-114 bpm)', value: 1, met: 3.0 },
@@ -37,64 +38,70 @@ export default function CaloriesScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Calories Burned Calculation</Text>
+    <View style={styles.outerContainer}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>Calories Burned Calculation</Text>
 
-      <Text style={styles.label}>Workout Duration (minutes)</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter duration"
-        value={duration}
-        onChangeText={setDuration}
-        keyboardType="numeric"
-      />
+        <Text style={styles.label}>Workout Duration (minutes)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter duration"
+          value={duration}
+          onChangeText={setDuration}
+          keyboardType="numeric"
+        />
 
-      <Text style={styles.label}>Heart Rate Zone</Text>
-      <View style={styles.zonesContainer}>
-        {HEART_RATE_ZONES.map(zone => (
-          <TouchableOpacity
-            key={zone.value}
-            style={[
-              styles.zoneButton,
-              selectedZone === zone.value && styles.zoneButtonSelected,
-            ]}
-            onPress={() => setSelectedZone(zone.value)}
-          >
-            <Text
+        <Text style={styles.label}>Heart Rate Zone</Text>
+        <View style={styles.zonesContainer}>
+          {HEART_RATE_ZONES.map(zone => (
+            <TouchableOpacity
+              key={zone.value}
               style={[
-                styles.zoneText,
-                selectedZone === zone.value && styles.zoneTextSelected,
+                styles.zoneButton,
+                selectedZone === zone.value && styles.zoneButtonSelected,
               ]}
+              onPress={() => setSelectedZone(zone.value)}
             >
-              {zone.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {errorMsg ? <Text style={styles.errorMsg}>{errorMsg}</Text> : null}
-
-      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-        <Text style={styles.submitButtonText}>Submit</Text>
-      </TouchableOpacity>
-
-      {calories && (
-        <View style={styles.resultContainer}>
-          <Text style={styles.resultLabel}>Calories Burned:</Text>
-          <Text style={styles.resultValue}>{calories} kcal</Text>
+              <Text
+                style={[
+                  styles.zoneText,
+                  selectedZone === zone.value && styles.zoneTextSelected,
+                ]}
+              >
+                {zone.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      )}
+
+        {errorMsg ? <Text style={styles.errorMsg}>{errorMsg}</Text> : null}
+
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+          <Text style={styles.submitButtonText}>Submit</Text>
+        </TouchableOpacity>
+
+        {calories && (
+          <View style={styles.resultContainer}>
+            <Text style={styles.resultLabel}>Calories Burned:</Text>
+            <Text style={styles.resultValue}>{calories} kcal</Text>
+          </View>
+        )}
+      </ScrollView>
+      <NavBar />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  outerContainer: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  container: {
     padding: 24,
     alignItems: 'center',
     justifyContent: 'flex-start',
+    paddingBottom: 100, // To avoid overlap with NavBar
   },
   title: {
     fontSize: 24,
