@@ -1,10 +1,11 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Header
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from passlib.context import CryptContext
 from jose import jwt, JWTError
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from dotenv import load_dotenv
+from typing import Optional
 import os
 
 load_dotenv() # take environment variables from .env
@@ -48,13 +49,37 @@ def decode_token(token: str):
     except JWTError:
         return None
 
+# --- Dependency to get current user ---
+async def get_current_user(authorization: Optional[str] = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
+    token = authorization.split(" ")[1]
+    payload = decode_token(token)
+    if not payload or "email" not in payload:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user = await db.users.find_one({"email": payload["email"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
 # --- Pydantic Models ---
 class UserIn(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 
 class UserOut(BaseModel):
-    email: str
+    email: EmailStr
+    first_name: Optional[str] = ""
+    last_name: Optional[str] = ""
+
+class ProfileBasicUpdate(BaseModel):
+    first_name: str
+    last_name: str
+    email: EmailStr
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
 
 # --- Routes ---
 @app.post("/register")
@@ -62,14 +87,21 @@ async def register(user: UserIn):
     if await db.users.find_one({"email": user.email}):
         raise HTTPException(status_code=400, detail="Email already registered")
     hashed = hash_password(user.password)
-    await db.users.insert_one({"email": user.email, "password": hashed})
+    await db.users.insert_one({
+        "email": user.email,
+        "password": hashed,
+        "first_name": "",
+        "last_name": "",
+        "favorites": [],
+        "added_spots": [],
+    })
     return {"message": "User registered"}
 
 @app.post("/login")
 async def login(user: UserIn):
     db_user = await db.users.find_one({"email": user.email})
     if not db_user or not verify_password(user.password, db_user["password"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="Invalid Email or Password")
     token = create_token({"email": user.email})
     return {"token": token}
 
@@ -79,3 +111,41 @@ async def get_me(token: str):
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
     return {"email": payload["email"]}
+
+# --- Profile Endpoints ---
+
+@app.get("/profile", response_model=UserOut)
+async def get_profile(current_user: dict = Depends(get_current_user)):
+    return UserOut(
+        email=current_user["email"],
+        first_name=current_user.get("first_name", ""),
+        last_name=current_user.get("last_name", "")
+    )
+
+@app.put("/profile/update")
+async def update_profile_basic(
+    update: ProfileBasicUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    # Check if email is being changed to another user's email
+    if update.email != current_user["email"]:
+        if await db.users.find_one({"email": update.email}):
+            raise HTTPException(status_code=400, detail="Email already in use.")
+    update_data = {
+        "first_name": update.first_name,
+        "last_name": update.last_name,
+        "email": update.email,
+    }
+    await db.users.update_one({"_id": current_user["_id"]}, {"$set": update_data})
+    return {"message": "Profile updated successfully"}
+
+@app.put("/profile/change-password")
+async def change_password(
+    update: PasswordChange,
+    current_user: dict = Depends(get_current_user)
+):
+    if not verify_password(update.current_password, current_user["password"]):
+        raise HTTPException(status_code=400, detail="Incorrect current password.")
+    new_hashed = hash_password(update.new_password)
+    await db.users.update_one({"_id": current_user["_id"]}, {"$set": {"password": new_hashed}})
+    return {"message": "Password changed successfully"}

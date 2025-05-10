@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../contexts/AuthContext'; // <-- Import useAuth
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -8,6 +9,7 @@ export default function LoginScreen() {
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { setToken } = useAuth(); // <-- Get setToken from context
 
   const handleLogin = async () => {
     setErrorMsg('');
@@ -24,10 +26,10 @@ export default function LoginScreen() {
       });
       const data = await response.json();
       if (response.ok && data.token) {
-        // You may want to store the token in async storage or context here
-        router.push('/calories');
+        setToken(data.token); // <-- Save token globally
+        router.push('/profile');
       } else {
-        setErrorMsg(data.detail || 'Invalid credentials');
+        setErrorMsg(data.detail || 'Invalid Email or Password');
       }
     } catch (error) {
       setErrorMsg('Could not connect to server.');
@@ -153,11 +155,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   signup: {
-  alignSelf: 'flex-start',
-  marginLeft: 8,
-  color: '#6c5b91',
-  fontWeight: 'bold',
-  marginBottom: 24,
-  fontSize: 13,
+    alignSelf: 'flex-start',
+    marginLeft: 8,
+    color: '#6c5b91',
+    fontWeight: 'bold',
+    marginBottom: 24,
+    fontSize: 13,
   },
 });
