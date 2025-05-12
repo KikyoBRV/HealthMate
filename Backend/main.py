@@ -3,9 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from passlib.context import CryptContext
 from jose import jwt, JWTError
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from dotenv import load_dotenv
-from typing import Optional
+from typing import Optional, List
 import os
 
 load_dotenv() # take environment variables from .env
@@ -81,6 +81,18 @@ class PasswordChange(BaseModel):
     current_password: str
     new_password: str
 
+class WorkoutSpotIn(BaseModel):
+    latitude: float
+    longitude: float
+    description: str
+
+class WorkoutSpotOut(BaseModel):
+    id: str = Field(..., alias="_id")
+    latitude: float
+    longitude: float
+    description: str
+    user_email: EmailStr
+
 # --- Routes ---
 @app.post("/register")
 async def register(user: UserIn):
@@ -149,3 +161,48 @@ async def change_password(
     new_hashed = hash_password(update.new_password)
     await db.users.update_one({"_id": current_user["_id"]}, {"$set": {"password": new_hashed}})
     return {"message": "Password changed successfully"}
+
+# --- Workout Spot Endpoints ---
+
+from bson import ObjectId
+
+def to_str_id(doc):
+    doc["_id"] = str(doc["_id"])
+    return doc
+
+@app.get("/workout-spots", response_model=List[WorkoutSpotOut])
+async def get_workout_spots(current_user: dict = Depends(get_current_user)):
+    """
+    Return all workout spots for all users.
+    """
+    spots = []
+    async for spot in db.workout_spots.find({}):
+        spot = to_str_id(spot)
+        spots.append(spot)
+    return spots
+
+@app.post("/workout-spots", response_model=WorkoutSpotOut)
+async def add_workout_spot(
+    spot: WorkoutSpotIn,
+    current_user: dict = Depends(get_current_user)
+):
+    doc = {
+        "latitude": spot.latitude,
+        "longitude": spot.longitude,
+        "description": spot.description,
+        "user_email": current_user["email"],
+    }
+    result = await db.workout_spots.insert_one(doc)
+    doc["_id"] = str(result.inserted_id)
+    return doc
+
+@app.get("/workout-spots/mine", response_model=List[WorkoutSpotOut])
+async def get_my_workout_spots(current_user: dict = Depends(get_current_user)):
+    """
+    Return only the current user's workout spots.
+    """
+    spots = []
+    async for spot in db.workout_spots.find({"user_email": current_user["email"]}):
+        spot = to_str_id(spot)
+        spots.append(spot)
+    return spots

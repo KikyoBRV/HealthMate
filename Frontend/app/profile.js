@@ -4,7 +4,7 @@ import NavBar from '../components/NavBar';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 
-const API_URL = 'http://localhost:8000';
+const API_URL = 'https://3b46-2405-9800-b670-aedc-1982-971a-9619-e34d.ngrok-free.app';
 
 export default function ProfileScreen() {
   const { token, setToken } = useAuth();

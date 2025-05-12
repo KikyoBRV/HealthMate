@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 const navItems = [
-  { label: 'Home', route: '/calories', icon: 'home-outline' },
+  { label: 'Workout Spot', route: '/workout-spot', icon: 'map-outline' },
   { label: 'Calories', route: '/calories', icon: 'flame-outline' },
   { label: 'Nutrient', route: '/nutrient', icon: 'nutrition-outline' },
   { label: 'Profile', route: '/profile', icon: 'person-outline' },
