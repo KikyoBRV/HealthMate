@@ -1,12 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import * as Location from 'expo-location';
+import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import NavBar from '../components/NavBar';
 import NativeMap from '../components/NativeMap';
 
-const API_URL = 'https://3b46-2405-9800-b670-aedc-1982-971a-9619-e34d.ngrok-free.app';
+const API_URL = 'https://5337-2405-9800-b670-aedc-2c93-adb3-3b53-5d61.ngrok-free.app';
+
+const workoutTypes = [
+  { label: 'General Fitness', value: 'general' },
+  { label: 'Running', value: 'running' },
+  { label: 'Cycling', value: 'cycling' },
+  { label: 'Swimming', value: 'swimming' },
+  { label: 'Yoga', value: 'yoga' },
+  { label: 'Team Sports', value: 'team_sports' },
+  { label: 'Strength Training', value: 'strength' },
+  { label: 'Other', value: 'other' },
+];
 
 export default function WorkoutSpotScreen() {
   const { token } = useAuth();
@@ -14,12 +26,14 @@ export default function WorkoutSpotScreen() {
 
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
+  const [type, setType] = useState('general');
   const [description, setDescription] = useState('');
   const [pins, setPins] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
 
-  // Get current location on mount
   useEffect(() => {
+    let subscription = null;
     (async () => {
       if (Platform.OS !== 'web') {
         let { status } = await Location.requestForegroundPermissionsAsync();
@@ -27,9 +41,30 @@ export default function WorkoutSpotScreen() {
           Alert.alert('Permission to access location was denied');
           return;
         }
-        let location = await Location.getCurrentPositionAsync({});
-        setLatitude(location.coords.latitude.toString());
-        setLongitude(location.coords.longitude.toString());
+        try {
+          subscription = await Location.watchPositionAsync(
+            {
+              accuracy: Location.Accuracy.High,
+              timeInterval: 1000,
+              distanceInterval: 1,
+            },
+            (location) => {
+              console.log('Location from watcher:', location);
+              setLatitude(location.coords.latitude.toString());
+              setLongitude(location.coords.longitude.toString());
+              setUserLocation({
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+              });
+              // Unsubscribe after first update
+              if (subscription) {
+                subscription.remove();
+              }
+            }
+          );
+        } catch (e) {
+          Alert.alert('Error getting location', e.message || String(e));
+        }
       }
     })();
     fetchPins();
@@ -49,7 +84,7 @@ export default function WorkoutSpotScreen() {
   };
 
   const handlePin = async () => {
-    if (!latitude || !longitude || !description) {
+    if (!latitude || !longitude || !type) {
       Alert.alert('Please fill in all fields.');
       return;
     }
@@ -65,12 +100,14 @@ export default function WorkoutSpotScreen() {
           latitude: parseFloat(latitude),
           longitude: parseFloat(longitude),
           description,
+          type,
         }),
       });
       if (res.ok) {
         setLatitude('');
         setLongitude('');
         setDescription('');
+        setType('general');
         fetchPins();
         Alert.alert('Pinned successfully!');
       } else {
@@ -83,14 +120,9 @@ export default function WorkoutSpotScreen() {
     }
   };
 
-  // Called when user taps on the map (Android/iOS)
   const handleMapPress = (coord) => {
     setLatitude(coord.latitude.toString());
     setLongitude(coord.longitude.toString());
-  };
-
-  const handlePinPress = (pin) => {
-    router.push({ pathname: '/favorites', params: { pinId: pin.id } });
   };
 
   return (
@@ -113,6 +145,21 @@ export default function WorkoutSpotScreen() {
           placeholder="Longitude"
           keyboardType="numeric"
         />
+        <Text style={styles.label}>Type of Workout</Text>
+        <View style={styles.pickerWrapper}>
+          <Picker
+            selectedValue={type}
+            onValueChange={setType}
+            style={styles.picker}
+            itemStyle={styles.pickerItem}
+            dropdownIconColor="#6c5b91"
+            mode="dropdown"
+          >
+            {workoutTypes.map((item) => (
+              <Picker.Item key={item.value} label={item.label} value={item.value} />
+            ))}
+          </Picker>
+        </View>
         <Text style={styles.label}>Description</Text>
         <TextInput
           style={styles.input}
@@ -130,6 +177,7 @@ export default function WorkoutSpotScreen() {
             style={styles.map}
             selectedLat={latitude ? parseFloat(latitude) : null}
             selectedLng={longitude ? parseFloat(longitude) : null}
+            userLocation={userLocation}
             onMapPress={handleMapPress}
           />
         </View>
@@ -179,6 +227,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 8,
     backgroundColor: '#fafafa',
+  },
+  pickerWrapper: {
+    width: '100%',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginBottom: 8,
+    backgroundColor: '#fafafa',
+    overflow: 'hidden',
+    justifyContent: 'center',
+  },
+  picker: {
+    width: '100%',
+    height: 55,
+    color: '#333',
+  },
+  pickerItem: {
+    fontSize: 16,
+    height: 44,
+    color: '#333',
   },
   pinButton: {
     width: '100%',

@@ -1,11 +1,28 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { StyleSheet, View, Text } from 'react-native';
+import MapView, { Marker, Callout } from 'react-native-maps';
 
-export default function NativeMap({ pins, style, selectedLat, selectedLng, onMapPress }) {
-  // Center on selected pin or Bangkok
-  const lat = selectedLat ?? (pins.length > 0 ? pins[0].latitude : 13.7563);
-  const lng = selectedLng ?? (pins.length > 0 ? pins[0].longitude : 100.5018);
+const workoutTypeLabels = {
+  general: 'General Fitness',
+  running: 'Running',
+  cycling: 'Cycling',
+  swimming: 'Swimming',
+  yoga: 'Yoga',
+  team_sports: 'Team Sports',
+  strength: 'Strength Training',
+  other: 'Other',
+};
+
+export default function NativeMap({ pins, style, selectedLat, selectedLng, userLocation, onMapPress }) {
+  // Center on selected pin, else user location, else first pin, else Bangkok
+  const lat =
+    selectedLat ??
+    (userLocation ? userLocation.latitude : null) ??
+    (pins.length > 0 ? pins[0].latitude : 13.7563);
+  const lng =
+    selectedLng ??
+    (userLocation ? userLocation.longitude : null) ??
+    (pins.length > 0 ? pins[0].longitude : 100.5018);
 
   return (
     <View style={[styles.container, style]}>
@@ -33,10 +50,18 @@ export default function NativeMap({ pins, style, selectedLat, selectedLng, onMap
         {/* Show all pins */}
         {pins.map((pin, idx) => (
           <Marker
-            key={idx}
+            key={pin.id || `${pin.latitude},${pin.longitude},${idx}`}
             coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
-            title={pin.description}
-          />
+            pinColor="red"
+          >
+            <Callout>
+              <View>
+                <Text style={{ fontWeight: 'bold', fontSize: 16 }}>
+                  {workoutTypeLabels[pin.type] || 'Workout Spot'}
+                </Text>
+              </View>
+            </Callout>
+          </Marker>
         ))}
         {/* Show the selected pin */}
         {selectedLat && selectedLng && (

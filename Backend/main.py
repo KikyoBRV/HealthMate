@@ -10,18 +10,15 @@ import os
 
 load_dotenv() # take environment variables from .env
 
-# --- Configuration ---
 MONGO_URL = os.getenv("MONGODB_URL")
 DB_NAME = "healthmate"
 SECRET_KEY = "your-secret-key"  # Change this to a strong secret in production
 ALGORITHM = "HS256"
 
-# --- App and DB Setup ---
 app = FastAPI()
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
 
-# --- CORS (allow frontend to connect) ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # In production, restrict this
@@ -30,7 +27,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Password Hashing ---
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def hash_password(password: str):
@@ -39,7 +35,6 @@ def hash_password(password: str):
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
-# --- JWT Token ---
 def create_token(data: dict):
     return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -49,7 +44,6 @@ def decode_token(token: str):
     except JWTError:
         return None
 
-# --- Dependency to get current user ---
 async def get_current_user(authorization: Optional[str] = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
@@ -62,7 +56,6 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-# --- Pydantic Models ---
 class UserIn(BaseModel):
     email: EmailStr
     password: str
@@ -85,15 +78,16 @@ class WorkoutSpotIn(BaseModel):
     latitude: float
     longitude: float
     description: str
+    type: str
 
 class WorkoutSpotOut(BaseModel):
     id: str = Field(..., alias="_id")
     latitude: float
     longitude: float
     description: str
+    type: str
     user_email: EmailStr
 
-# --- Routes ---
 @app.post("/register")
 async def register(user: UserIn):
     if await db.users.find_one({"email": user.email}):
@@ -124,8 +118,6 @@ async def get_me(token: str):
         raise HTTPException(status_code=401, detail="Invalid token")
     return {"email": payload["email"]}
 
-# --- Profile Endpoints ---
-
 @app.get("/profile", response_model=UserOut)
 async def get_profile(current_user: dict = Depends(get_current_user)):
     return UserOut(
@@ -139,7 +131,6 @@ async def update_profile_basic(
     update: ProfileBasicUpdate,
     current_user: dict = Depends(get_current_user)
 ):
-    # Check if email is being changed to another user's email
     if update.email != current_user["email"]:
         if await db.users.find_one({"email": update.email}):
             raise HTTPException(status_code=400, detail="Email already in use.")
@@ -162,8 +153,6 @@ async def change_password(
     await db.users.update_one({"_id": current_user["_id"]}, {"$set": {"password": new_hashed}})
     return {"message": "Password changed successfully"}
 
-# --- Workout Spot Endpoints ---
-
 from bson import ObjectId
 
 def to_str_id(doc):
@@ -172,9 +161,6 @@ def to_str_id(doc):
 
 @app.get("/workout-spots", response_model=List[WorkoutSpotOut])
 async def get_workout_spots(current_user: dict = Depends(get_current_user)):
-    """
-    Return all workout spots for all users.
-    """
     spots = []
     async for spot in db.workout_spots.find({}):
         spot = to_str_id(spot)
@@ -190,6 +176,7 @@ async def add_workout_spot(
         "latitude": spot.latitude,
         "longitude": spot.longitude,
         "description": spot.description,
+        "type": spot.type,
         "user_email": current_user["email"],
     }
     result = await db.workout_spots.insert_one(doc)
@@ -198,9 +185,6 @@ async def add_workout_spot(
 
 @app.get("/workout-spots/mine", response_model=List[WorkoutSpotOut])
 async def get_my_workout_spots(current_user: dict = Depends(get_current_user)):
-    """
-    Return only the current user's workout spots.
-    """
     spots = []
     async for spot in db.workout_spots.find({"user_email": current_user["email"]}):
         spot = to_str_id(spot)
