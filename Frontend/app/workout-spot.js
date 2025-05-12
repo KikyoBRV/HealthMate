@@ -184,10 +184,28 @@ export default function WorkoutSpotScreen() {
 
         <View style={styles.buttonRow}>
           <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/my-pins')}>
-            <Text style={styles.secondaryButtonText}>My Pin Location</Text>
+            <Text style={styles.secondaryButtonTextSmall}>My Pin Location</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/favorites')}>
-            <Text style={styles.secondaryButtonText}>Favorites</Text>
+            <Text style={styles.secondaryButtonTextSmall}>Favorites</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => {
+              if (userLocation) {
+                router.push({
+                  pathname: '/nearby-spots',
+                  params: {
+                    lat: userLocation.latitude,
+                    lng: userLocation.longitude,
+                  },
+                });
+              } else {
+                Alert.alert('Location not available', 'Please enable location services.');
+              }
+            }}
+          >
+            <Text style={styles.secondaryButtonTextSmall}>Workout Spot Near Me</Text>
           </TouchableOpacity>
         </View>
         <View style={{ height: 80 }} />
@@ -282,14 +300,16 @@ const styles = StyleSheet.create({
   secondaryButton: {
     flex: 1,
     backgroundColor: '#eee',
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 20,
     alignItems: 'center',
-    marginHorizontal: 8,
+    marginHorizontal: 4,
+    minWidth: 0,
   },
-  secondaryButtonText: {
+  secondaryButtonTextSmall: {
     color: '#6c5b91',
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
