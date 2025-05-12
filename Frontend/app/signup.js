@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 
-const API_URL = 'https://3b46-2405-9800-b670-aedc-1982-971a-9619-e34d.ngrok-free.app';
+const API_URL = 'https://4cc6-2405-9800-b670-aedc-6049-ef0a-ae15-4bdf.ngrok-free.app';
 
 export default function SignUpScreen() {
   const [email, setEmail] = useState('');

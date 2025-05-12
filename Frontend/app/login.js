@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'reac
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext'; // <-- Import useAuth
 
-const API_URL = 'https://3b46-2405-9800-b670-aedc-1982-971a-9619-e34d.ngrok-free.app';
+const API_URL = 'https://4cc6-2405-9800-b670-aedc-6049-ef0a-ae15-4bdf.ngrok-free.app';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
