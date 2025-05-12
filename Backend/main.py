@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, status, Header
+from fastapi import FastAPI, HTTPException, Depends, status, Header, Path
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from passlib.context import CryptContext
@@ -64,6 +64,7 @@ class UserOut(BaseModel):
     email: EmailStr
     first_name: Optional[str] = ""
     last_name: Optional[str] = ""
+    added_spots: Optional[list] = []
 
 class ProfileBasicUpdate(BaseModel):
     first_name: str
@@ -87,6 +88,19 @@ class WorkoutSpotOut(BaseModel):
     description: str
     type: str
     user_email: EmailStr
+
+class WorkoutSpotUpdate(BaseModel):
+    description: Optional[str] = None
+    type: Optional[str] = None
+
+class IdsRequest(BaseModel):
+    ids: List[str]
+
+from bson import ObjectId, errors
+
+def to_str_id(doc):
+    doc["_id"] = str(doc["_id"])
+    return doc
 
 @app.post("/register")
 async def register(user: UserIn):
@@ -123,7 +137,8 @@ async def get_profile(current_user: dict = Depends(get_current_user)):
     return UserOut(
         email=current_user["email"],
         first_name=current_user.get("first_name", ""),
-        last_name=current_user.get("last_name", "")
+        last_name=current_user.get("last_name", ""),
+        added_spots=current_user.get("added_spots", [])
     )
 
 @app.put("/profile/update")
@@ -153,12 +168,6 @@ async def change_password(
     await db.users.update_one({"_id": current_user["_id"]}, {"$set": {"password": new_hashed}})
     return {"message": "Password changed successfully"}
 
-from bson import ObjectId
-
-def to_str_id(doc):
-    doc["_id"] = str(doc["_id"])
-    return doc
-
 @app.get("/workout-spots", response_model=List[WorkoutSpotOut])
 async def get_workout_spots(current_user: dict = Depends(get_current_user)):
     spots = []
@@ -181,6 +190,13 @@ async def add_workout_spot(
     }
     result = await db.workout_spots.insert_one(doc)
     doc["_id"] = str(result.inserted_id)
+
+    # Add the spot's ID to the user's added_spots array (as a string)
+    await db.users.update_one(
+        {"email": current_user["email"]},
+        {"$addToSet": {"added_spots": doc["_id"]}}
+    )
+
     return doc
 
 @app.get("/workout-spots/mine", response_model=List[WorkoutSpotOut])
@@ -190,3 +206,61 @@ async def get_my_workout_spots(current_user: dict = Depends(get_current_user)):
         spot = to_str_id(spot)
         spots.append(spot)
     return spots
+
+@app.post("/workout-spots/by-ids")
+async def get_spots_by_ids(
+    ids_request: IdsRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    object_ids = [ObjectId(i) for i in ids_request.ids if i]
+    spots = []
+    async for spot in db.workout_spots.find({"_id": {"$in": object_ids}}):
+        spot["_id"] = str(spot["_id"])
+        spots.append(spot)
+    return spots
+
+@app.put("/workout-spots/{spot_id}")
+async def update_workout_spot(
+    spot_id: str = Path(...),
+    update: WorkoutSpotUpdate = None,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        obj_id = ObjectId(spot_id)
+    except errors.InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid spot ID format")
+    spot = await db.workout_spots.find_one({"_id": obj_id})
+    if not spot:
+        raise HTTPException(status_code=404, detail="Spot not found")
+    if spot["user_email"] != current_user["email"]:
+        raise HTTPException(status_code=403, detail="Not your spot")
+    update_data = {}
+    if update and update.description is not None:
+        update_data["description"] = update.description
+    if update and update.type is not None:
+        update_data["type"] = update.type
+    if update_data:
+        await db.workout_spots.update_one({"_id": obj_id}, {"$set": update_data})
+    return {"message": "Spot updated"}
+
+@app.delete("/workout-spots/{spot_id}")
+async def delete_workout_spot(
+    spot_id: str = Path(...),
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        obj_id = ObjectId(spot_id)
+    except errors.InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid spot ID format")
+    spot = await db.workout_spots.find_one({"_id": obj_id})
+    if not spot:
+        raise HTTPException(status_code=404, detail="Spot not found")
+    if spot["user_email"] != current_user["email"]:
+        raise HTTPException(status_code=403, detail="Not your spot")
+    await db.workout_spots.delete_one({"_id": obj_id})
+    # Remove from user's added_spots
+    await db.users.update_one(
+        {"email": current_user["email"]},
+        {"$pull": {"added_spots": spot_id}}
+    )
+    return {"message": "Spot deleted"}
