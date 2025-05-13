@@ -264,3 +264,36 @@ async def delete_workout_spot(
         {"$pull": {"added_spots": spot_id}}
     )
     return {"message": "Spot deleted"}
+
+# --- FAVORITES ENDPOINTS ---
+@app.post("/favorites/{spot_id}")
+async def add_favorite_spot(
+    spot_id: str = Path(...),
+    current_user: dict = Depends(get_current_user)
+):
+    await db.users.update_one(
+        {"email": current_user["email"]},
+        {"$addToSet": {"favorites": spot_id}}
+    )
+    return {"message": "Added to favorites"}
+
+@app.get("/favorites")
+async def get_favorites(current_user: dict = Depends(get_current_user)):
+    favorite_ids = current_user.get("favorites", [])
+    object_ids = [ObjectId(i) for i in favorite_ids if i]
+    spots = []
+    async for spot in db.workout_spots.find({"_id": {"$in": object_ids}}):
+        spot["_id"] = str(spot["_id"])
+        spots.append(spot)
+    return spots
+
+@app.delete("/favorites/{spot_id}")
+async def remove_favorite_spot(
+    spot_id: str = Path(...),
+    current_user: dict = Depends(get_current_user)
+):
+    await db.users.update_one(
+        {"email": current_user["email"]},
+        {"$pull": {"favorites": spot_id}}
+    )
+    return {"message": "Removed from favorites"}
